@@ -42,5 +42,32 @@ pipeline {
                 sh 'cp target/demo-0.0.1-SNAPSHOT.jar ${JAR_FILE_NAME}'
             }
         }
+
+        stage('Copy to Remote Server') {
+            steps {
+                // Jenkins가 원격 서버 SSH 접속할 수 있도록 sshaent 사용
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    // 원격 서버에 배포 디렉토리 생성(없으면 새로 만듦)
+                    sh "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${REMOTE_USER}@${REMOTE_HOST} \"mkdir -p ${REMOTE_DIR}\""
+                    // Jar 파일과 Dockerfile을 원격 서버에 복사
+                    sh "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${JAR_FILE_NAME} Dockerfile ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+                }
+            }
+        }
+
+        stage('Remote Docker Build & Deploy') {
+            steps {
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    sh """
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${REMOTE_USER}@${REMOTE_HOST} << ENDSSH
+    cd ${REMOTE_DIR} || exit 1
+    docker rm -f ${CONTAINER_NAME} || true
+    docker build -t ${DOCKER_IMAGE} .
+    docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${PORT} ${DOCKER_IMAGE}
+ENDSSH
+                    """
+                }
+            }
+        }
     }
 }
