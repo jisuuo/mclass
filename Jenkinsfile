@@ -38,7 +38,7 @@ pipeline {
 
         stage('Prepare Jar') {
             steps {
-                // 빌드 결과물 JAR 파일을 지정한 이름(app.jar)으로 복사
+                // 빌드 결과물 JAR 파일을 지정한 이름(app.jar)으로 복사 //
                 sh 'cp target/demo-0.0.1-SANPSHOT.jar ${JAR_FILE_NAME}'
             }
         }
